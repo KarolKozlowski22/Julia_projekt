@@ -1,8 +1,8 @@
 Ładowanie danych...
 Dane załadowane!
-  0.783371 seconds (914.96 k allocations: 720.263 MiB, 3.48% gc time, 53.57% compilation time)
-Epoch: 1 (10.05s) 	Train: (l: 0.3999, a: 0.8323) 	Test: (l: 0.3307, a: 0.8635)
-Epoch: 2 (3.83s) 	Train: (l: 0.0744, a: 0.9758) 	Test: (l: 0.4126, a: 0.8595)
-Epoch: 3 (3.82s) 	Train: (l: 0.0101, a: 0.9988) 	Test: (l: 0.5053, a: 0.8550)
-Epoch: 4 (3.96s) 	Train: (l: 0.0023, a: 0.9996) 	Test: (l: 0.5514, a: 0.8570)
-Epoch: 5 (3.77s) 	Train: (l: 0.0013, a: 0.9998) 	Test: (l: 0.5845, a: 0.8580)
+  0.801323 seconds (914.96 k allocations: 720.263 MiB, 3.84% gc time, 56.70% compilation time)
+Epoch: 1 (10.02s) 	Train: (l: 0.6540, a: 0.7272) 	Test: (l: 0.5575, a: 0.8480)
+Epoch: 2 (3.72s) 	Train: (l: 0.3926, a: 0.9090) 	Test: (l: 0.3696, a: 0.8635)
+Epoch: 3 (3.64s) 	Train: (l: 0.2154, a: 0.9486) 	Test: (l: 0.3203, a: 0.8750)
+Epoch: 4 (3.77s) 	Train: (l: 0.1342, a: 0.9719) 	Test: (l: 0.3091, a: 0.8730)
+Epoch: 5 (3.71s) 	Train: (l: 0.0875, a: 0.9861) 	Test: (l: 0.3123, a: 0.8730)
