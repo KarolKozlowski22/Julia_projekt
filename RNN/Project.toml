@@ -1,0 +1,4 @@
+name = "RNN"
+uuid = "0daae09b-cb42-4fda-9f16-758bc5cf6edc"
+authors = ["Wiktor Łodyga <wiktor.lodyga.dokt@pw.edu.pl>"]
+version = "0.1.0"
