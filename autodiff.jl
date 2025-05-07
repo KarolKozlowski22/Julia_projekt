@@ -8,13 +8,15 @@ mutable struct TensorJL
     _backward::Function
     _prev::Set{TensorJL}
     
-    function TensorJL(data::Array{Float32}, requires_grad=false, _children=Set{TensorJL}())
-        new(data, 
+    function TensorJL(data::AbstractArray{<:Real}, requires_grad=false, _children=Set{TensorJL}())
+        data_f32 = Float32.(data)
+        new(data_f32, 
             requires_grad ? zeros(Float32, size(data)) : nothing,
             requires_grad,
             () -> nothing,
             _children)
     end
+    
 end
 
 
@@ -68,20 +70,25 @@ function matmul(a::TensorJL, b::TensorJL)
 end
 
 function add(a::TensorJL, b::TensorJL)
-    out_data = a.data .+ b.data
+    a_data = a.data
+    b_data = size(a_data) == size(b.data) ? b.data : repeat(b.data, size(a_data, 1), 1)
+
+    out_data = a_data .+ b_data
     out = TensorJL(out_data, a.requires_grad || b.requires_grad, Set([a, b]))
     
     function _backward()
         if a.requires_grad
-            a.grad += out.grad
+            a.grad .+= out.grad
         end
         if b.requires_grad
-            b.grad += sum(out.grad, dims=1)
+            # Sumujemy wzdłuż batcha, by wrócić do rozmiaru (1, features)
+            b.grad .+= sum(out.grad, dims=1)
         end
     end
     out._backward = _backward
-    out
+    return out
 end
+
 
 function relu(x::TensorJL)
     out_data = max.(0, x.data)
