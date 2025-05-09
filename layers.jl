@@ -6,7 +6,8 @@ struct Dense
 end
 
 Dense(in_features::Int, out_features::Int) = Dense(
-    TensorJL(randn(Float32, in_features, out_features) * 0.1f0, true),
+    # TensorJL(randn(Float32, in_features, out_features) * 0.1f0, true),
+    TensorJL(randn(Float32, in_features, out_features) * √(2f0 / in_features), true),
     TensorJL(zeros(Float32, 1, out_features), true)
 )
 
@@ -72,6 +73,10 @@ function (e::Embedding)(x::TensorJL)
     batch_size, seq_len = size(x.data)
     emb_dim = size(e.weight.data, 2)
     out_data = Array{Float32}(undef, batch_size, seq_len, emb_dim)
+    # println(">>  Embedding out size =", size(out_data))
+    if size(out_data, 3) == 1        # podejrzanie − zgłoś
+        @warn "Embedding dim is 1!"
+    end
     index_copy = Array{Int}(undef, batch_size, seq_len)  # potrzebne do backwarda
 
     for i in 1:batch_size
@@ -109,30 +114,39 @@ end
 
 function RNN(input_size::Int, hidden_size::Int, activation=relu)
     RNN(
-        TensorJL(randn(Float32, input_size, hidden_size) * 0.1f0, true),
-        TensorJL(randn(Float32, hidden_size, hidden_size) * 0.1f0, true),
+        TensorJL(randn(Float32, input_size,  hidden_size) *
+                 √(2f0 / input_size),  true),     # Wxh – zostaje He
+        TensorJL(randn(Float32, hidden_size, hidden_size) *
+                 0.01f0, true),                   # Whh – dużo mniejszy!
         TensorJL(zeros(Float32, 1, hidden_size), true),
         activation
     )
 end
 
-
 function (rnn::RNN)(x::TensorJL)
     # x: (batch_size, seq_len, input_size)
-    batch_size, seq_len, input_size = size(x.data)
+    # println(">>  RNN in size      =", size(x.data))
+    batch_size = size(x.data, 1)
+    seq_len    = size(x.data, 2)
+    input_size = size(x.data, 3) 
     hidden_size = size(rnn.Whh.data, 2)
     h = zeros(Float32, batch_size, hidden_size)
     h_tensor = TensorJL(h, rnn.Wxh.requires_grad || rnn.Whh.requires_grad, Set())
 
     for t in 1:seq_len
         xt = slice_along_time(x, t)
-        h_tensor = rnn.activation(add(add(matmul(xt, rnn.Wxh), matmul(h_tensor, rnn.Whh)), rnn.bh))
+        h_tensor = rnn.activation(
+                      add(add(matmul(xt, rnn.Wxh),
+                              matmul(h_tensor, rnn.Whh)),
+                          rnn.bh))
+        h_tensor.data .= clamp.(h_tensor.data, -20f0, 20f0)
     end
     h_tensor
 end
 
 function slice_along_time(x::TensorJL, t::Int)
     out_data = @view x.data[:, t, :]
+    # println(">>  slice t=", t, "  size =", size(out_data))   # pokaże (batch, ?, ?)
     out = TensorJL(out_data, x.requires_grad, Set([x]))
 
     function _backward()
@@ -147,5 +161,17 @@ end
 
 last_output(x::TensorJL) = x
 
-flatten(x::TensorJL) = TensorJL(reshape(x.data, size(x.data, 1), :), x.requires_grad, Set([x]))
+function flatten(x::TensorJL)
+    orig_shape = size(x.data)           # (batch, seq_len, hidden)
+    out_data   = reshape(x.data, size(x.data,1), :)   # (batch, -1)
+    out = TensorJL(out_data, x.requires_grad, Set([x]))
 
+    function _backward()
+        if x.requires_grad && out.grad !== nothing
+            # „rozprostowany” grad trzeba ułożyć z powrotem do oryginalnego kształtu
+            x.grad .+= reshape(out.grad, orig_shape)
+        end
+    end
+    out._backward = _backward
+    return out
+end

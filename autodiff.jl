@@ -32,26 +32,52 @@ function Base.show(io::IO, t::TensorJL)
     print(io, "TensorJL($(size(t.data)), grad=$(t.grad !== nothing)")
 end
 
-function backward!(t::TensorJL)
-    topo = TensorJL[]
-    visited = Set{TensorJL}()
+# function backward!(t::TensorJL)
+#     topo = TensorJL[]
+#     visited = Set{TensorJL}()
     
-    function build_topo(v::TensorJL)
-        if !(v in visited)
-            push!(visited, v)
-            for child in v._prev
-                build_topo(child)
-            end
+#     function build_topo(v::TensorJL)
+#         if !(v in visited)
+#             push!(visited, v)
+#             for child in v._prev
+#                 build_topo(child)
+#             end
+#             push!(topo, v)
+#         end
+#     end
+    
+#     build_topo(t)
+#     t.grad = ones(Float32, size(t.data))
+#     for v in reverse(topo)
+#         v._backward()
+#     end
+# end
+
+
+# ── autodiff.jl ────────────────────────────────────────────────────────
+function backward!(t::TensorJL)
+    topo    = TensorJL[]                    # będzie:  leaf …→ parent → loss
+    visited = Set{TensorJL}()
+    stack   = [(t, false)]                 # (node, children_done?)
+
+    while !isempty(stack)
+        v, done = pop!(stack)
+        if done                     # wracamy tu dopiero PO dzieciach ⇒ post-order
             push!(topo, v)
+        elseif v ∉ visited
+            push!(visited, v)
+            push!(stack, (v, true))        # wrócimy, gdy dzieci będą zebrane
+            foreach(child -> push!(stack, (child, false)), v._prev)
         end
     end
-    
-    build_topo(t)
-    t.grad = ones(Float32, size(t.data))
-    for v in reverse(topo)
+
+    t.grad = ones(Float32, size(t.data))    # ∂L/∂L = 1
+
+    for v in reverse(topo)                  # loss → … → param
         v._backward()
     end
 end
+
 
 function matmul(a::TensorJL, b::TensorJL)
     out_data = a.data * b.data
